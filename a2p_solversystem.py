@@ -20,9 +20,18 @@
 #*                                                                         *
 #***************************************************************************
 
+try:
+    import FreeCAD, FreeCADGui
+except ModuleNotFoundError:
+    import freecad
+    import FreeCAD
+
 import os
-import FreeCAD, FreeCADGui
-from PySide import QtGui
+import importlib
+
+if FreeCAD.GuiUp:
+    from PySide import QtGui
+
 from a2p_translateUtils import *
 import a2plib
 from a2plib import (
@@ -33,8 +42,15 @@ from a2plib import (
     A2P_DEBUG_1,
     PARTIAL_SOLVE_STAGE1,
     )
+
+import a2p_dependencies
+import a2p_rigid
 from a2p_dependencies import Dependency
 from a2p_rigid import Rigid
+
+# Allow modifying these scripts without reload freecad gui
+importlib.reload(a2p_dependencies)
+importlib.reload(a2p_rigid)
 
 SOLVER_MAXSTEPS = 50000
 
@@ -83,6 +99,11 @@ class SolverSystem():
         self.maxAxisError = 0.0
         self.maxSingleAxisError = 0.0
         self.unmovedParts = []
+
+        self.maxPosErrors, self.maxAxisErrors, self.maxSingleAxisErrors, self.maxCollErrors = list(), list(), list(), list()
+        self.with_collide = False
+        self.silent = False
+        self.maxCollError = 0.0
 
     def clear(self):
         for r in self.rigids:
@@ -150,7 +171,7 @@ class SolverSystem():
         self.convergencyCounter = 0
         self.lastPositionError = SOLVER_CONVERGENCY_ERROR_INIT_VALUE
         self.lastAxisError = SOLVER_CONVERGENCY_ERROR_INIT_VALUE
-        #
+
         self.constraints = []
         constraints =[]             # temporary list
         if matelist is not None:        # Transfer matelist to the temp list
@@ -217,19 +238,33 @@ class SolverSystem():
             rig.hierarchyLinkedRigids.extend(rig.linkedRigids)
 
         if len(deleteList) > 0:
-            msg = translate("A2plus", "The following constraints are broken:") + "\n"
-            for c in deleteList:
-                msg += "{}\n".format(c.Label)
-            msg += translate("A2plus", "Do you want to delete them?")
+            if FreeCAD.GuiUp:
+                msg = translate("A2plus", "The following constraints are broken:") + "\n"
+                for c in deleteList:
+                    msg += "{}\n".format(c.Label)
+                msg += translate("A2plus", "Do you want to delete them?")
 
-            flags = QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No
-            response = QtGui.QMessageBox.critical(
-                QtGui.QApplication.activeWindow(),
-                translate("A2plus", "Delete broken constraints?"),
-                msg,
-                flags
-                )
-            if response == QtGui.QMessageBox.Yes:
+                flags = QtGui.QMessageBox.StandardButton.Yes | QtGui.QMessageBox.StandardButton.No
+                response = QtGui.QMessageBox.critical(
+                    QtGui.QApplication.activeWindow(),
+                    translate("A2plus", "Delete broken constraints?"),
+                    msg,
+                    flags
+                    )
+                if response == QtGui.QMessageBox.Yes:
+                    response = True
+                else:
+                    response = False
+            else:
+                print("The following constraints are broken:", end=" ")
+                for c in deleteList:
+                    print(c.Label)
+                response = input("Do you want to delete them? [y/n]")
+                if response == "y":
+                    response = True
+                else:
+                    response = False
+            if response:
                 for c in deleteList:
                     a2plib.removeConstraint(c)
 
@@ -433,9 +468,9 @@ class SolverSystem():
         f.write("</html>")
         f.close()
 
-    def calcMoveData(self,doc):
+    def calcMoveData(self, doc, worklist):
         for rig in self.rigids:
-            rig.calcMoveData(doc, self)
+            rig.calcMoveData(doc, self, worklist)
 
     def prepareRestart(self):
         for rig in self.rigids:
@@ -470,6 +505,8 @@ class SolverSystem():
                 systemSolved = True
                 break
             if systemSolved:
+                if self.with_collide:
+                    break
                 self.level_of_accuracy+=1
                 if self.level_of_accuracy > len(self.getSolverControlData()):
                     self.solutionToParts(doc)
@@ -502,7 +539,7 @@ class SolverSystem():
 
     def solveSystem(self,doc,matelist=None, showFailMessage=True):
         if not a2plib.SIMULATION_STATE:
-            Msg(translate("A2plus", "===== Start Solving System ======\n"))
+            print("===== Start Solving System ======")
 
         systemSolved = self.solveAccuracySteps(doc,matelist)
         if self.status == "loadingDependencyError":
@@ -510,29 +547,18 @@ class SolverSystem():
         if systemSolved:
             self.status = "solved"
             if not a2plib.SIMULATION_STATE:
-                Msg(translate("A2plus", "===== System solved using partial + recursive unfixing =====\n"))
+                print("===== System solved using partial + recursive unfixing =====")
                 self.checkForUnmovedParts()
+                return systemSolved
         else:
-            if a2plib.SIMULATION_STATE == True:
+            if a2plib.SIMULATION_STATE:
                 self.status = "unsolved"
                 return systemSolved
 
             else: # a2plib.SIMULATION_STATE == False
                 self.status = "unsolved"
-                if showFailMessage == True:
-                    Msg(translate("A2plus", "===== Could not solve system ======\n"))
-                    msg = \
-translate("A2plus",
-'''
-Constraints inconsistent. Cannot solve System.
-Please run the conflict finder tool!
-'''
-)
-                    QtGui.QMessageBox.information(
-                        QtGui.QApplication.activeWindow(),
-                        translate("A2plus", "Constraint mismatch"),
-                        msg
-                        )
+                if showFailMessage:
+                    print("===== Could not solve system ======")
                 return systemSolved
 
     def checkForUnmovedParts(self):
@@ -542,8 +568,9 @@ Please run the conflict finder tool!
         ignore them and they are not moved.
         This function detects this and signals it to the user.
         """
-        if len(self.unmovedParts) != 0:
+        if len(self.unmovedParts) != 0 and FreeCAD.GuiUp:
             FreeCADGui.Selection.clearSelection()
+            msg = ""
             for obj in self.unmovedParts:
                 FreeCADGui.Selection.addSelection(obj)
                 msg = translate("A2plus",
@@ -564,10 +591,10 @@ to a fixed part!
                 print ('')
 
     def printList(self, name, l):
-        Msg("{} = (".format(name))
+        print("{} = (".format(name))
         for e in l:
-            Msg( "{} ".format(e.label) )
-        Msg("):\n")
+            print("{} ".format(e.label))
+        print(")")
 
     def calculateChain(self, doc):
         self.stepCount = 0
@@ -590,8 +617,9 @@ to a fixed part!
             # load initial worklist with all fixed parts...
             for rig in self.rigids:
                 if rig.fixed:
-                    workList.append(rig);
-            #self.printList("Initial-Worklist", workList)
+                    workList.append(rig)
+            if not self.silent:
+                self.printList("Initial-Worklist", workList)
 
             while True:
                 addList = []
@@ -639,6 +667,7 @@ to a fixed part!
             maxPosError = 0.0
             maxAxisError = 0.0
             maxSingleAxisError = 0.0
+            maxCollError = 0.0
 
             calcCount += 1
             self.stepCount += 1
@@ -646,7 +675,7 @@ to a fixed part!
             # First calculate all the movement vectors
             for w in workList:
                 w.moved = True
-                w.calcMoveData(doc, self)
+                w.calcMoveData(doc, self, workList)
                 if w.maxPosError > maxPosError:
                     maxPosError = w.maxPosError
                 if w.maxAxisError > maxAxisError:
@@ -654,9 +683,27 @@ to a fixed part!
                 if w.maxSingleAxisError > maxSingleAxisError:
                     maxSingleAxisError = w.maxSingleAxisError
 
+                if self.with_collide:
+                    if w.maxCollError > maxCollError:
+                        maxCollError = w.maxCollError
+                    if w.collide:
+                        collide = True
+
             # Perform the move
             for w in workList:
                 w.move(doc)
+                w.applySolution(doc, self)  # Ajouté par moi pour debug
+                # if k == 1 and self.convergencyCounter in [0,1,2,3,4,5,10,20,30,50,100,500,1000]:
+                #     ob = FreeCAD.ActiveDocument.addObject("Part::Feature", "v"+str(self.convergencyCounter))
+                #     ob.Shape = FreeCAD.ActiveDocument.getObject(w.objectName).Shape
+
+            self.maxPosErrors.append(maxPosError)
+            self.maxAxisErrors.append(maxAxisError)
+            self.maxSingleAxisErrors.append(maxSingleAxisError)
+            if self.with_collide:
+                self.maxCollErrors.append(maxCollError)
+            if FreeCAD.GuiUp:
+                FreeCADGui.updateGui()
 
             # The accuracy is good, apply the solution to FreeCAD's objects
             if (maxPosError <= reqPosAccuracy and   # relevant check
@@ -694,18 +741,18 @@ to a fixed part!
                         self.convergencyCounter = 0
                         continue
                     else:
-                        Msg('\n')
-                        Msg('convergency-conter: {}\n'.format(self.convergencyCounter))
-                        Msg(translate("A2plus", "Calculation stopped, no convergency anymore!\n"))
+                        print('convergency-conter: {}'.format(self.convergencyCounter))
+                        print("Calculation stopped, no convergency anymore!")
                         return False
 
                 self.lastPositionError = maxPosError
                 self.lastAxisError = maxAxisError
                 self.maxSingleAxisError = maxSingleAxisError
+                self.maxCollError = maxCollError
                 self.convergencyCounter = 0
 
             if self.stepCount > SOLVER_MAXSTEPS:
-                Msg(translate("A2plus", "Reached max calculations count: {}\n").format(SOLVER_MAXSTEPS) )
+                print("Reached max calculations count:", SOLVER_MAXSTEPS)
                 return False
         return True
 
@@ -714,9 +761,9 @@ to a fixed part!
             rig.applySolution(doc, self);
 
 #------------------------------------------------------------------------------
-def solveConstraints( doc, cache=None, useTransaction = True, matelist=None, showFailMessage=True):
+def solveConstraints( doc, with_collide=False, cache=None, useTransaction = True, matelist=None, showFailMessage=True):
 
-    if doc is None:
+    if doc is None and FreeCAD.GuiUp:
         QtGui.QMessageBox.information(
                     QtGui.QApplication.activeWindow(),
                     translate("A2plus", "No active document found!"),
@@ -724,12 +771,15 @@ def solveConstraints( doc, cache=None, useTransaction = True, matelist=None, sho
                     )
         return
 
-    if useTransaction: doc.openTransaction("a2p_systemSolving")
+    if useTransaction:
+        doc.openTransaction("a2p_systemSolving")
     ss = SolverSystem()
+    ss.with_collide = with_collide
     systemSolved = ss.solveSystem(doc, matelist, showFailMessage )
-    if useTransaction: doc.commitTransaction()
+    if useTransaction:
+        doc.commitTransaction()
     a2plib.unTouchA2pObjects()
-    return systemSolved
+    return (systemSolved, ss.maxAxisErrors, ss.maxPosErrors, ss.maxSingleAxisErrors, ss.maxCollErrors)
 
 def autoSolveConstraints( doc, callingFuncName, cache=None, useTransaction=True, matelist=None):
     if not a2plib.getAutoSolveState():
@@ -755,7 +805,8 @@ class a2p_SolverCommand:
             'ToolTip' : translate("A2plus", "Solves constraints")
             }
 
-FreeCADGui.addCommand('a2p_SolverCommand', a2p_SolverCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_SolverCommand', a2p_SolverCommand())
 #------------------------------------------------------------------------------
 
 
