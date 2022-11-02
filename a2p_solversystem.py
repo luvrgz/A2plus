@@ -104,6 +104,7 @@ class SolverSystem():
         self.with_collide = False
         self.silent = False
         self.maxCollError = 0.0
+        self.silence = False
 
     def clear(self):
         for r in self.rigids:
@@ -158,7 +159,7 @@ class SolverSystem():
 
         if len(faultyConstraintList) > 0:
             for fc in faultyConstraintList:
-                print(translate("A2plus", "Remove faulty constraint '{}'").format(fc.Label))
+                if not self.silence: print(translate("A2plus", "Remove faulty constraint '{}'").format(fc.Label))
                 doc.removeObject(fc.Name)
 
     def loadSystem(self,doc, matelist=None):
@@ -256,9 +257,10 @@ class SolverSystem():
                 else:
                     response = False
             else:
-                print("The following constraints are broken:", end=" ")
-                for c in deleteList:
-                    print(c.Label)
+                if not self.silence:
+                    print("The following constraints are broken:", end=" ")
+                    for c in deleteList:
+                        print(c.Label)
                 response = input("Do you want to delete them? [y/n]")
                 if response == "y":
                     response = True
@@ -538,7 +540,7 @@ class SolverSystem():
         return systemSolved
 
     def solveSystem(self,doc,matelist=None, showFailMessage=True):
-        if not a2plib.SIMULATION_STATE:
+        if not a2plib.SIMULATION_STATE and not self.silence:
             print("===== Start Solving System ======")
 
         systemSolved = self.solveAccuracySteps(doc,matelist)
@@ -547,7 +549,7 @@ class SolverSystem():
         if systemSolved:
             self.status = "solved"
             if not a2plib.SIMULATION_STATE:
-                print("===== System solved using partial + recursive unfixing =====")
+                if not self.silence: print("===== System solved using partial + recursive unfixing =====")
                 self.checkForUnmovedParts()
                 return systemSolved
         else:
@@ -558,7 +560,7 @@ class SolverSystem():
             else: # a2plib.SIMULATION_STATE == False
                 self.status = "unsolved"
                 if showFailMessage:
-                    print("===== Could not solve system ======")
+                    if not self.silence: print("===== Could not solve system ======")
                 return systemSolved
 
     def checkForUnmovedParts(self):
@@ -585,7 +587,7 @@ to a fixed part!
                     translate("A2plus", "Could not move some parts"),
                     msg
                     )
-            else:
+            elif not self.silence:
                 print ('')
                 print (msg) # during conflict finding do a print to console output
                 print ('')
@@ -618,7 +620,7 @@ to a fixed part!
             for rig in self.rigids:
                 if rig.fixed:
                     workList.append(rig)
-            if not self.silent:
+            if not self.silence:
                 self.printList("Initial-Worklist", workList)
 
             while True:
@@ -741,8 +743,9 @@ to a fixed part!
                         self.convergencyCounter = 0
                         continue
                     else:
-                        print('convergency-conter: {}'.format(self.convergencyCounter))
-                        print("Calculation stopped, no convergency anymore!")
+                        if not self.silence:
+                            print('convergency-conter: {}'.format(self.convergencyCounter))
+                            print("Calculation stopped, no convergency anymore!")
                         return False
 
                 self.lastPositionError = maxPosError
@@ -752,7 +755,7 @@ to a fixed part!
                 self.convergencyCounter = 0
 
             if self.stepCount > SOLVER_MAXSTEPS:
-                print("Reached max calculations count:", SOLVER_MAXSTEPS)
+                if not self.silence: print("Reached max calculations count:", SOLVER_MAXSTEPS)
                 return False
         return True
 
@@ -776,6 +779,7 @@ def solveConstraints(doc, with_collide=False, silence=False, cache=None, useTran
         doc.openTransaction("a2p_systemSolving")
     ss = SolverSystem()
     ss.with_collide = with_collide
+    ss.silence = silence
     systemSolved = ss.solveSystem(doc, matelist, showFailMessage )
     if useTransaction:
         doc.commitTransaction()
