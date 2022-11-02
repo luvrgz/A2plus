@@ -201,4 +201,6 @@ class a2p_ConvertPartCommand():
                 return False
         return True
 
-FreeCADGui.addCommand('a2p_ConvertPart',a2p_ConvertPartCommand())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_ConvertPart',a2p_ConvertPartCommand())

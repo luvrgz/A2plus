@@ -108,5 +108,7 @@ class a2p_reAdjustConstraintDirectionsCommand:
             'MenuText': translate("A2plus_constraintServices", "Re-adjust directions of all constraints"),
             'ToolTip' : translate("A2plus_constraintServices", "Re-adjust directions of all constraints to fit best")
             }
-FreeCADGui.addCommand('a2p_reAdjustConstraintDirectionsCommand', a2p_reAdjustConstraintDirectionsCommand())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_reAdjustConstraintDirectionsCommand', a2p_reAdjustConstraintDirectionsCommand())
 #==============================================================================

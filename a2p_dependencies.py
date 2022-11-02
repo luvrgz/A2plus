@@ -44,9 +44,8 @@ from a2p_libDOF import (
     create_Axis2Points
     )
 
-#------------------------------------------------------------------------------
 
-class Dependency():
+class Dependency:
     def __init__(self, constraint, refType, axisRotation):
         self.Enabled = False
         self.Type = None
@@ -466,7 +465,6 @@ class Dependency():
 
         return axis
 
-#------------------------------------------------------------------------------
 
 class DependencyPointIdentity(Dependency):
     def __init__(self, constraint, refType):
@@ -493,6 +491,7 @@ class DependencyPointIdentity(Dependency):
         #dofpos = PointIdentityPos(tmpaxis,_dofPos,_pointconstraints)
         #dofrot = PointIdentityRot(tmpaxis,_dofRot,_pointconstraints)
         return PointIdentity(tmpaxis, _dofPos, _dofRot, _pointconstraints)
+
 
 class DependencyPointOnLine(Dependency):
     def __init__(self, constraint, refType):
@@ -535,7 +534,6 @@ class DependencyPointOnLine(Dependency):
         #dofpos = PointIdentityPos(tmpaxis,_dofPos,_pointconstraints)
         #dofrot = PointIdentityRot(tmpaxis,_dofRot,_pointconstraints)
         return PointIdentity(tmpaxis, _dofPos, _dofRot, _pointconstraints)
-
 
 
 class DependencyPointOnPlane(Dependency):
@@ -583,6 +581,7 @@ class DependencyPointOnPlane(Dependency):
         #dofrot = PointIdentityRot(tmpaxis,_dofRot,_pointconstraints)
         return PointIdentity(tmpaxis, _dofPos, _dofRot, _pointconstraints)
 
+
 class DependencyCircularEdge(Dependency):
     def __init__(self, constraint, refType):
         Dependency.__init__(self, constraint, refType, True)
@@ -616,6 +615,7 @@ class DependencyCircularEdge(Dependency):
             tmpaxis = cleanAxis(create_Axis2Points(self.refPoint,self.refAxisEnd))
             return [], AxisAlignment(tmpaxis,_dofRot)
 
+
 class DependencyParallelPlanes(Dependency):
     def __init__(self, constraint, refType):
         Dependency.__init__(self, constraint, refType, True)
@@ -633,6 +633,7 @@ class DependencyParallelPlanes(Dependency):
         tmpaxis = cleanAxis(create_Axis2Points(self.refPoint,self.refAxisEnd))
         tmpaxis.Direction.Length = 2.0
         return _dofPos, AxisAlignment(tmpaxis,_dofRot)
+
 
 class DependencyAngledPlanes(Dependency):
     def __init__(self, constraint, refType):
@@ -675,6 +676,7 @@ class DependencyAngledPlanes(Dependency):
         tmpaxis.Direction.Length = 2.0
         return _dofPos, AngleAlignment(tmpaxis,_dofRot)
 
+
 class DependencyPlane(Dependency):
     def __init__(self, constraint, refType):
         Dependency.__init__(self, constraint, refType, True)
@@ -703,6 +705,7 @@ class DependencyPlane(Dependency):
         pos = PlaneOffset(tmpaxis,_dofPos)
         tmpaxis.Direction.Length = 2.0
         return pos, AxisAlignment(tmpaxis,_dofRot)
+
 
 class DependencyAxial(Dependency):
     def __init__(self, constraint, refType):
@@ -757,6 +760,7 @@ class DependencyAxial(Dependency):
             return AxisDistance(tmpaxis,_dofPos), []
         else:
             return AxisDistance(tmpaxis,_dofPos), AxisAlignment(tmpaxis,_dofRot)
+
 
 class DependencyAxisParallel(Dependency):
     def __init__(self, constraint, refType):
@@ -817,6 +821,7 @@ class DependencyAxisPlaneParallel(Dependency):
         tmpaxis.Direction.Length = 2.0
         return _dofPos, AngleAlignment(tmpaxis,_dofRot)
 
+
 class DependencyAxisPlaneAngle(Dependency):
     def __init__(self, constraint, refType):
         Dependency.__init__(self, constraint, refType, True)
@@ -857,6 +862,7 @@ class DependencyAxisPlaneAngle(Dependency):
         tmpaxis.Direction.Length = 2.0
         return _dofPos, AngleAlignment(tmpaxis,_dofRot)
 
+
 class DependencyAxisPlaneNormal(Dependency):
     def __init__(self, constraint, refType):
         Dependency.__init__(self, constraint, refType, True)
@@ -873,6 +879,7 @@ class DependencyAxisPlaneNormal(Dependency):
         tmpaxis = cleanAxis(create_Axis2Points(self.refPoint,self.refAxisEnd))
         tmpaxis.Direction.Length = 2.0
         return _dofPos, AngleAlignment(tmpaxis,_dofRot)
+
 
 class DependencyCenterOfMass(Dependency):
     def __init__(self, constraint, refType):

@@ -323,4 +323,5 @@ class a2p_SimpleAssemblyShapeCommand():
     def IsActive(self):
         return True
 
-FreeCADGui.addCommand('a2p_SimpleAssemblyShapeCommand',a2p_SimpleAssemblyShapeCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_SimpleAssemblyShapeCommand',a2p_SimpleAssemblyShapeCommand())

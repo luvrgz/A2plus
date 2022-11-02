@@ -70,6 +70,7 @@ class BasicConstraint():
         self.offset = None
         self.angle = None
         self.lockRotation = None
+        self.id_aa = None
 
 
     def create(self,selection):
@@ -96,6 +97,7 @@ class BasicConstraint():
         ob.addProperty("App::PropertyString","Toponame1","ConstraintInfo").Toponame1 = ''
         ob.addProperty("App::PropertyString","Toponame2","ConstraintInfo").Toponame2 = ''
         ob.addProperty("App::PropertyBool","Suppressed","ConstraintInfo").Suppressed = False
+        ob.addProperty("App::PropertyInteger", "id_aa", "ConstraintInfo").id_aa = -1
 
         for prop in ["Object1","Object2","SubElement1","SubElement2","Type"]:
             ob.setEditorMode(prop, 1)

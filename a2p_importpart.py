@@ -233,13 +233,16 @@ def importPartFromFile(
         if filename.lower().endswith('.fcstd'):
             importDoc = FreeCAD.openDocument(filename)
         elif filename.lower().endswith('.stp') or filename.lower().endswith('.step'):
-            import ImportGui
             fname =  os.path.splitext(os.path.basename(filename))[0]
             FreeCAD.newDocument(fname)
             newname = FreeCAD.ActiveDocument.Name
             FreeCAD.setActiveDocument(newname)
-            ImportGui.insert(filename,newname)
             importDoc = FreeCAD.ActiveDocument
+
+            if FreeCAD.GuiUp:
+                import ImportGui
+                ImportGui.insert(filename,newname)
+
         else:
             msg = translate("A2plus", "A part can only be imported from a FreeCAD '*.FCStd' file")
             QtGui.QMessageBox.information( QtGui.QApplication.activeWindow(), translate("A2plus", "Value Error"), msg )
@@ -265,7 +268,7 @@ def importPartFromFile(
     #-------------------------------------------
     importableObjects = topoMapper.getTopLevelObjects(allowSketches=True)
 
-    if len(importableObjects) == 0:
+    if len(importableObjects) == 0 and FreeCAD.GuiUp:
         msg = translate("A2plus", "No visible Part to import found. Aborting operation")
         QtGui.QMessageBox.information(
             QtGui.QApplication.activeWindow(),
@@ -284,12 +287,14 @@ def importPartFromFile(
         if desiredShapeLabel is None: # ask for a shape label
             for io in importableObjects:
                 labelList.append(io.Label)
-            dialog = a2p_shapeExtractDialog(
-                QtGui.QApplication.activeWindow(),
-                labelList,
-                dc)
-            dialog.exec_()
-            if dc.tx is None:
+
+            if FreeCAD.GuiUp:
+                dialog = a2p_shapeExtractDialog(
+                    QtGui.QApplication.activeWindow(),
+                    labelList,
+                    dc)
+                dialog.exec_()
+            if dc.tx is None and FreeCAD.GuiUp:
                 msg = translate("A2plus", "Import of a shape reference aborted by user")
                 QtGui.QMessageBox.information(
                     QtGui.QApplication.activeWindow(),
@@ -383,13 +388,14 @@ def importPartFromFile(
 
     doc.recompute()
 
-    if importToCache: # this import is used to update already imported parts
-        objectCache.add(cacheKey, newObj)
-    else: # this is a first time import of a part
-        if not a2plib.getPerFaceTransparency():
-            # turn of perFaceTransparency by accessing ViewObject.Transparency and set to zero (non transparent)
-            newObj.ViewObject.Transparency = 1
-            newObj.ViewObject.Transparency = 0 # import assembly first time as non transparent.
+    if FreeCAD.GuiUp:
+        if importToCache: # this import is used to update already imported parts
+            objectCache.add(cacheKey, newObj)
+        else: # this is a first time import of a part
+            if not a2plib.getPerFaceTransparency():
+                # turn of perFaceTransparency by accessing ViewObject.Transparency and set to zero (non transparent)
+                newObj.ViewObject.Transparency = 1
+                newObj.ViewObject.Transparency = 0 # import assembly first time as non transparent.
 
 
     lcsList = a2p_lcs_support.getListOfLCS(doc,importDoc)
@@ -623,8 +629,8 @@ class a2p_ImportShapeReferenceCommand():
         FreeCADGui.SendMsgToActiveView("ViewFit")
         self.timer.stop()
 
-
-FreeCADGui.addCommand('a2p_ImportShapeReferenceCommand',a2p_ImportShapeReferenceCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_ImportShapeReferenceCommand',a2p_ImportShapeReferenceCommand())
 
 #==============================================================================
 toolTip = \
@@ -664,7 +670,8 @@ class a2p_Restore_Transparency_Command():
         if doc is None: return False
         return True
 
-FreeCADGui.addCommand('a2p_Restore_Transparency',a2p_Restore_Transparency_Command())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_Restore_Transparency',a2p_Restore_Transparency_Command())
 
 #==============================================================================
 toolTip = \
@@ -766,8 +773,8 @@ class a2p_ImportPartCommand():
         FreeCADGui.SendMsgToActiveView("ViewFit")
         self.timer.stop()
 
-
-FreeCADGui.addCommand('a2p_ImportPart',a2p_ImportPartCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_ImportPart',a2p_ImportPartCommand())
 #==============================================================================
 
 
@@ -931,7 +938,8 @@ class a2p_UpdateImportedPartsCommand:
             'ToolTip' : toolTip
             }
 
-FreeCADGui.addCommand('a2p_updateImportedParts', a2p_UpdateImportedPartsCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_updateImportedParts', a2p_UpdateImportedPartsCommand())
 
 
 
@@ -972,6 +980,7 @@ def duplicateImportedPart( part ):
     newObj.ViewObject.Transparency = part.ViewObject.Transparency
     newObj.Placement.Base = part.Placement.Base
     newObj.Placement.Rotation = part.Placement.Rotation
+    newObj.id_aa = part.id_aa
     return newObj
 
 
@@ -1035,7 +1044,8 @@ class a2p_DuplicatePartCommand:
             'ToolTip' : toolTip
             }
 
-FreeCADGui.addCommand('a2p_duplicatePart', a2p_DuplicatePartCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_duplicatePart', a2p_DuplicatePartCommand())
 
 
 
@@ -1162,7 +1172,8 @@ class a2p_EditPartCommand:
             'ToolTip' : toolTip
             }
 
-FreeCADGui.addCommand('a2p_editImportedPart', a2p_EditPartCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_editImportedPart', a2p_EditPartCommand())
 
 
 #===============================================================================
@@ -1252,7 +1263,8 @@ class a2p_MovePartCommand:
             'ToolTip' : toolTip
             }
 
-FreeCADGui.addCommand('a2p_movePart', a2p_MovePartCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_movePart', a2p_MovePartCommand())
 #===============================================================================
 class ConstrainedPartsMover:
     def __init__(self, view):
@@ -1372,7 +1384,8 @@ class a2p_MovePartUnderConstraints:
             'ToolTip' : toolTip
             }
 
-FreeCADGui.addCommand('a2p_MovePartUnderConstraints', a2p_MovePartUnderConstraints())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_MovePartUnderConstraints', a2p_MovePartUnderConstraints())
 #===============================================================================
 
 
@@ -1452,7 +1465,9 @@ class DeleteConnectionsCommand:
             'MenuText': translate("A2plus", "Delete all constraints of selected parts"),
             'ToolTip' : toolTipText
             }
-FreeCADGui.addCommand('a2p_DeleteConnectionsCommand', DeleteConnectionsCommand())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_DeleteConnectionsCommand', DeleteConnectionsCommand())
 #===============================================================================
 
 
@@ -1504,7 +1519,8 @@ class ViewConnectionsCommand:
             'ToolTip' : toolTip
             }
 
-FreeCADGui.addCommand('a2p_ViewConnectionsCommand', ViewConnectionsCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_ViewConnectionsCommand', ViewConnectionsCommand())
 #===============================================================================
 
 
@@ -1602,7 +1618,8 @@ class a2p_isolateCommand:
             'ToolTip' : toolTip
             }
 
-FreeCADGui.addCommand('a2p_isolateCommand', a2p_isolateCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_isolateCommand', a2p_isolateCommand())
 #===============================================================================
 
 
@@ -1632,7 +1649,9 @@ class a2p_ToggleTransparencyCommand:
             'ToolTip'  : translate("A2plus", "Toggles transparency of assembly"),
             'Checkable': self.IsChecked()
         }
-FreeCADGui.addCommand('a2p_ToggleTransparencyCommand', a2p_ToggleTransparencyCommand())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_ToggleTransparencyCommand', a2p_ToggleTransparencyCommand())
 #===============================================================================
 
 
@@ -1666,7 +1685,9 @@ class a2p_ToggleAutoSolveCommand:
             'ToolTip'  : toolTipMessage,
             'Checkable': self.IsChecked()
             }
-FreeCADGui.addCommand('a2p_ToggleAutoSolveCommand', a2p_ToggleAutoSolveCommand())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_ToggleAutoSolveCommand', a2p_ToggleAutoSolveCommand())
 #===============================================================================
 
 
@@ -1685,7 +1706,9 @@ class a2p_TogglePartialProcessingCommand:
             'ToolTip'  : translate("A2plus", "Toggle partial processing"),
             'Checkable': self.IsChecked()
             }
-FreeCADGui.addCommand('a2p_TogglePartialProcessingCommand', a2p_TogglePartialProcessingCommand())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_TogglePartialProcessingCommand', a2p_TogglePartialProcessingCommand())
 #===============================================================================
 
 
@@ -1709,7 +1732,9 @@ class a2p_repairTreeViewCommand:
             'MenuText': translate("A2plus", "Repair the tree view if it is somehow damaged"),
             'ToolTip' : toolTipMessage
             }
-FreeCADGui.addCommand('a2p_repairTreeViewCommand', a2p_repairTreeViewCommand())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_repairTreeViewCommand', a2p_repairTreeViewCommand())
 #===============================================================================
 
 
@@ -1744,7 +1769,9 @@ class a2p_FlipConstraintDirectionCommand:
             'MenuText': translate("A2plus", "Flip direction of last constraint"),
             'ToolTip' : toolTip
             }
-FreeCADGui.addCommand('a2p_FlipConstraintDirectionCommand', a2p_FlipConstraintDirectionCommand())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_FlipConstraintDirectionCommand', a2p_FlipConstraintDirectionCommand())
 #===============================================================================
 
 
@@ -1753,11 +1780,14 @@ def a2p_FlipConstraintDirection():
     constraints = [ obj for obj in FreeCAD.ActiveDocument.Objects
                         if 'ConstraintInfo' in obj.Content ]
     if len(constraints) == 0:
-        QtGui.QMessageBox.information(
-            QtGui.qApp.activeWindow(),
-            translate("A2plus", "Command Aborted"),
-            translate("A2plus", "Flip aborted since no a2p constraints in active document.")
-            )
+        if FreeCAD.GuiUp:
+            QtGui.QMessageBox.information(
+                QtGui.qApp.activeWindow(),
+                translate("A2plus", "Command Aborted"),
+                translate("A2plus", "Flip aborted since no a2p constraints in active document.")
+                )
+        else:
+            print("Flip aborted since no a2p constraints in active document.")
         return
     lastConstraintAdded = constraints[-1]
     try:
@@ -1793,7 +1823,9 @@ class a2p_Show_Hierarchy_Command:
             'MenuText': translate("A2plus", "Generate HTML file with detailed constraining structure"),
             'ToolTip' : translate("A2plus", "Generates HTML file with detailed constraining structure")
             }
-FreeCADGui.addCommand('a2p_Show_Hierarchy_Command', a2p_Show_Hierarchy_Command())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_Show_Hierarchy_Command', a2p_Show_Hierarchy_Command())
 #===============================================================================
 
 
@@ -1860,7 +1892,9 @@ class a2p_Show_PartLabels_Command:
             'ToolTip'  : translate("A2plus", "Toggle showing part labels in 3D view"),
             'Checkable': False
             }
-FreeCADGui.addCommand('a2p_Show_PartLabels_Command', a2p_Show_PartLabels_Command())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_Show_PartLabels_Command', a2p_Show_PartLabels_Command())
 #===============================================================================
 
 
@@ -1896,7 +1930,9 @@ class a2p_Show_DOF_info_Command:
             'ToolTip'  : translate("A2plus", "Toggle printing detailed DOF information"),
             'Checkable': False
             }
-FreeCADGui.addCommand('a2p_Show_DOF_info_Command', a2p_Show_DOF_info_Command())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_Show_DOF_info_Command', a2p_Show_DOF_info_Command())
 #===============================================================================
 
 
@@ -1931,7 +1967,9 @@ class a2p_absPath_to_relPath_Command:
             'MenuText': translate("A2plus", "Convert absolute paths of imported parts to relative ones"),
             'ToolTip' : translate("A2plus", "Converts absolute paths of imported parts to relative ones")
             }
-FreeCADGui.addCommand('a2p_absPath_to_relPath_Command', a2p_absPath_to_relPath_Command())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_absPath_to_relPath_Command', a2p_absPath_to_relPath_Command())
 
 
 #==============================================================================
@@ -1961,7 +1999,9 @@ class a2p_SaveAndExit_Command:
             'MenuText': translate("A2plus", "Save and exit the active document"),
             'ToolTip' : translate("A2plus", "Save and exit the active document")
             }
-FreeCADGui.addCommand('a2p_SaveAndExit_Command', a2p_SaveAndExit_Command())
+
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_SaveAndExit_Command', a2p_SaveAndExit_Command())
 
 
 #==============================================================================
@@ -2026,7 +2066,8 @@ class a2p_MigrateProxiesCommand():
             'ToolTip': toolTip
             }
 
-FreeCADGui.addCommand('a2p_MigrateProxiesCommand', a2p_MigrateProxiesCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_MigrateProxiesCommand', a2p_MigrateProxiesCommand())
 #==============================================================================
 
 
@@ -2171,5 +2212,6 @@ class a2p_cleanUpDebug3dCommand():
             'ToolTip' : toolTip
             }
 
-FreeCADGui.addCommand('a2p_cleanUpDebug3dCommand', a2p_cleanUpDebug3dCommand())
+if FreeCAD.GuiUp:
+    FreeCADGui.addCommand('a2p_cleanUpDebug3dCommand', a2p_cleanUpDebug3dCommand())
 #==============================================================================

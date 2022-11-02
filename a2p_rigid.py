@@ -30,34 +30,10 @@ from PySide import QtGui, QtCore
 from FreeCAD import Base
 from a2p_translateUtils import *
 import a2plib
-from a2plib import (
-    drawVector,
-    path_a2p,
-    getObjectVertexFromName,
-    getObjectEdgeFromName,
-    getObjectFaceFromName,
-    isLine,
-    getPos,
-    getAxis,
-    appVersionStr,
-    Msg,
-    DebugMsg,
-    A2P_DEBUG_LEVEL,
-    A2P_DEBUG_1,
-    A2P_DEBUG_2,
-    A2P_DEBUG_3,
-    PARTIAL_SOLVE_STAGE1,
-    )
+from a2plib import Msg
 import a2p_libDOF
+import a2pl_collider6 as collider
 
-from a2p_libDOF import (
-    SystemOrigin,
-    SystemXAxis,
-    SystemYAxis,
-    SystemZAxis
-    )
-import os, sys
-#from __builtin__ import False
 
 
 SPINSTEP_DIVISOR = 12.0 #12
@@ -109,6 +85,8 @@ class Rigid():
         self.posDOF = a2p_libDOF.initPosDOF #each rigid has DOF for position
         self.rotDOF = a2p_libDOF.initRotDOF #each rigid has DOF for rotation
         #dof are useful only for animation at the moment? maybe it can be used to set tempfixed property
+        self.collide = False
+        self.maxCollError = 0.0
 
     def prepareRestart(self):
         self.tempfixed = self.fixed
@@ -304,8 +282,9 @@ class Rigid():
             if dep.refPoint.z > zmax: zmax=dep.refPoint.z
         self.refPointsBoundBoxSize = math.sqrt( (xmax-xmin)**2 + (ymax-ymin)**2 + (zmax-zmin)**2 )
 
-    def calcMoveData(self, doc, solver):
-        if self.tempfixed or self.fixed: return
+    def calcMoveData(self, doc, solver, worklist):
+        if self.tempfixed or self.fixed:
+            return
         depRefPoints = []               #collect Data to compute central movement of rigid
         depMoveVectors = []             #all moveVectors
         depRefPoints_Spin = []          #refPoints, relevant for spin generation...
@@ -315,7 +294,7 @@ class Rigid():
         self.maxAxisError = 0.0         # SpinError is an average of all single spins
         self.maxSingleAxisError = 0.0   # avoid average, to detect unsolvable assemblies
         self.countSpinVectors = 0
-        self.moveVectorSum = Base.Vector(0,0,0)
+        self.moveVectorSum = Base.Vector(0, 0, 0)
         self.spin = None
 
         for dep in self.dependencies:
@@ -338,6 +317,26 @@ class Rigid():
 
             # Accomulate all the movements for later average calculations
             self.moveVectorSum = self.moveVectorSum.add(moveVector)
+
+            # Here are collision computation
+            self.collide = False
+            if solver.with_collide:
+                this_object = doc.getObject(self.objectName)
+                for obj in [doc.getObject(rig.objectName) for rig in worklist]:
+                    if obj.Name != self.objectName:
+                        col = collider.Collider(this_object, obj)
+                        col.calculate()
+                        for force in col.forces_on_1:
+                            refPoint = force.application_point
+                            moveVector = force.direction * abs(force.amplitude)
+                            depRefPoints.append(refPoint)
+                            depMoveVectors.append(moveVector)
+                            self.moveVectorSum = self.moveVectorSum.add(moveVector)
+                            depRefPoints_Spin.append(refPoint)
+                            depMoveVectors_Spin.append(moveVector)
+                            self.collide = True
+                            if force.amplitude > self.maxCollError:
+                                self.maxCollError = force.amplitude
 
         # Calculate the average of all the movements
         if len(depMoveVectors) > 0:

@@ -69,6 +69,10 @@ class Proxy_importPart:
         if not "updateColors" in propList:
             obj.addProperty("App::PropertyBool","updateColors","importPart")
             obj.updateColors = True
+        # Ajouté par moi
+        if not "id_aa" in propList:
+            obj.addProperty("App::PropertyInteger", "id_aa", "importPart")
+            obj.id_aa = -1
         if a2plib.GRAPHICALDEBUG == True and not "debugmode" in propList:
             obj.addProperty("App::PropertyBool","debugmode","importPart")
             obj.debugmode = False
