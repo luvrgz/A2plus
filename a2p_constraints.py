@@ -75,7 +75,7 @@ class BasicConstraint():
 
     def create(self,selection):
         cName = findUnusedObjectName(self.constraintBaseName)
-        ob = FreeCAD.activeDocument().addObject("App::FeaturePython", cName)
+        ob = FreeCAD.ActiveDocument.addObject("App::FeaturePython", cName)
         s1, s2 = selection
 
         self.ob1Name = s1.ObjectName
@@ -83,8 +83,8 @@ class BasicConstraint():
         self.ob1Label = s1.Object.Label
         self.ob2Label = s2.Object.Label
 
-        self.ob1 = FreeCAD.activeDocument().getObject(s1.ObjectName)
-        self.ob2 = FreeCAD.activeDocument().getObject(s2.ObjectName)
+        self.ob1 = FreeCAD.ActiveDocument.getObject(s1.ObjectName)
+        self.ob2 = FreeCAD.ActiveDocument.getObject(s2.ObjectName)
 
         self.sub1 = s1.SubElementNames[0]
         self.sub2 = s2.SubElementNames[0]
@@ -98,6 +98,7 @@ class BasicConstraint():
         ob.addProperty("App::PropertyString","Toponame2","ConstraintInfo").Toponame2 = ''
         ob.addProperty("App::PropertyBool","Suppressed","ConstraintInfo").Suppressed = False
         ob.addProperty("App::PropertyInteger", "id_aa", "ConstraintInfo").id_aa = -1
+        ob.addProperty("App::PropertyPythonObject", "dict_faces", "ConstraintInfo").dict_faces = {}
 
         for prop in ["Object1","Object2","SubElement1","SubElement2","Type"]:
             ob.setEditorMode(prop, 1)
@@ -112,13 +113,14 @@ class BasicConstraint():
     def setupProxies(self):
         c = self.constraintObject
         c.Proxy = ConstraintObjectProxy()
-        c.ViewObject.Proxy = ConstraintViewProviderProxy(
-            c,
-            self.iconPath,
-            True,
-            self.ob2Label,
-            self.ob1Label
-            )
+        if FreeCAD.GuiUp:
+            c.ViewObject.Proxy = ConstraintViewProviderProxy(
+                c,
+                self.iconPath,
+                True,
+                self.ob2Label,
+                self.ob1Label
+                )
 
     def groupUnderParentTreeObject(self):
         c = self.constraintObject

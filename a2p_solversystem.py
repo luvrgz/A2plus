@@ -760,8 +760,9 @@ to a fixed part!
         for rig in self.rigids:
             rig.applySolution(doc, self);
 
-#------------------------------------------------------------------------------
-def solveConstraints( doc, with_collide=False, cache=None, useTransaction = True, matelist=None, showFailMessage=True):
+
+# TODO: Add silence in solveconstraint
+def solveConstraints(doc, with_collide=False, silence=False, cache=None, useTransaction = True, matelist=None, showFailMessage=True):
 
     if doc is None and FreeCAD.GuiUp:
         QtGui.QMessageBox.information(

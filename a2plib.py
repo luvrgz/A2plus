@@ -1001,7 +1001,7 @@ def getAxis(obj, subElementName):
     return axis # may be none!
 #------------------------------------------------------------------------------
 def unTouchA2pObjects():
-    doc = FreeCAD.activeDocument()
+    doc = FreeCAD.ActiveDocument
     for obj in doc.Objects:
         # leave A2pSketches touched (for recomputing dependent shapes)
         if isA2pSketch(obj): continue

@@ -599,36 +599,37 @@ class TopoMapper(object):
                 tempShape = self.makePlacedShape(ob)
                 faces.extend(tempShape.Faces) #let python libs extend faces, much faster
 
-                #manage colors of faces                
-                if ob.ViewObject.TypeId == "Gui::ViewProviderLinkPython": # a link is involved...
-                    linkedObject = self.getLinkedObjectRecursive(ob)
-                    needDiffuseExtension = ( len(linkedObject.ViewObject.DiffuseColor) < len(linkedObject.Shape.Faces) )
-                    shapeCol = linkedObject.ViewObject.ShapeColor
-                    diffuseCol = linkedObject.ViewObject.DiffuseColor
-                    transparency = linkedObject.ViewObject.Transparency
-                    shape_list.append(ob.Shape)
+                #manage colors of faces
+                if FreeCAD.GuiUp:
+                    if ob.ViewObject.TypeId == "Gui::ViewProviderLinkPython": # a link is involved...
+                        linkedObject = self.getLinkedObjectRecursive(ob)
+                        needDiffuseExtension = ( len(linkedObject.ViewObject.DiffuseColor) < len(linkedObject.Shape.Faces) )
+                        shapeCol = linkedObject.ViewObject.ShapeColor
+                        diffuseCol = linkedObject.ViewObject.DiffuseColor
+                        transparency = linkedObject.ViewObject.Transparency
+                        shape_list.append(ob.Shape)
 
-                    if needDiffuseExtension:
-                        diffuseElement = a2plib.makeDiffuseElement(shapeCol,transparency)
-                        for i in range(0,len(tempShape.Faces)):
-                            faceColors.append(diffuseElement)
-                    else:
-                        count = len(ob.Shape.Faces)//len(linkedObject.Shape.Faces)
-                        for c in range(0,count): # add colors to multiple representations of linkedObject
-                            faceColors.extend(diffuseCol)
-                else: # no link is involved...
-                    needDiffuseExtension = ( len(ob.ViewObject.DiffuseColor) < len(ob.Shape.Faces) )
-                    shapeCol = ob.ViewObject.ShapeColor
-                    diffuseCol = ob.ViewObject.DiffuseColor
-                    transparency = ob.ViewObject.Transparency
-                    shape_list.append(ob.Shape)
-                    if needDiffuseExtension:
-                        diffuseElement = a2plib.makeDiffuseElement(shapeCol,transparency)
-                        for i in range(0,len(tempShape.Faces)):
-                            faceColors.append(diffuseElement)
-                    else:
-                        faceColors.extend(diffuseCol) #let python libs extend faceColors, much faster
-                        
+                        if needDiffuseExtension:
+                            diffuseElement = a2plib.makeDiffuseElement(shapeCol,transparency)
+                            for i in range(0,len(tempShape.Faces)):
+                                faceColors.append(diffuseElement)
+                        else:
+                            count = len(ob.Shape.Faces)//len(linkedObject.Shape.Faces)
+                            for c in range(0,count): # add colors to multiple representations of linkedObject
+                                faceColors.extend(diffuseCol)
+                    else: # no link is involved...
+                        needDiffuseExtension = ( len(ob.ViewObject.DiffuseColor) < len(ob.Shape.Faces) )
+                        shapeCol = ob.ViewObject.ShapeColor
+                        diffuseCol = ob.ViewObject.DiffuseColor
+                        transparency = ob.ViewObject.Transparency
+                        shape_list.append(ob.Shape)
+                        if needDiffuseExtension:
+                            diffuseElement = a2plib.makeDiffuseElement(shapeCol,transparency)
+                            for i in range(0,len(tempShape.Faces)):
+                                faceColors.append(diffuseElement)
+                        else:
+                            faceColors.extend(diffuseCol) #let python libs extend faceColors, much faster
+
     
             shell = Part.makeShell(faces)
             try:

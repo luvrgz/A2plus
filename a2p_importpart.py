@@ -241,7 +241,10 @@ def importPartFromFile(
 
             if FreeCAD.GuiUp:
                 import ImportGui
-                ImportGui.insert(filename,newname)
+                ImportGui.insert(filename, newname)
+            else:
+                import Import
+                Import.insert(filename, newname)
 
         else:
             msg = translate("A2plus", "A part can only be imported from a FreeCAD '*.FCStd' file")
@@ -366,19 +369,23 @@ def importPartFromFile(
 
     if subAssemblyImport:
         if extractSingleShape:
-            newObj.muxInfo, newObj.Shape, newObj.ViewObject.DiffuseColor, newObj.ViewObject.Transparency = \
+            newObj.muxInfo, newObj.Shape, diffuse_color, transparency = \
                 muxAssemblyWithTopoNames(importDoc,desiredShapeLabel = dc.tx)
         else:
-            newObj.muxInfo, newObj.Shape, newObj.ViewObject.DiffuseColor, newObj.ViewObject.Transparency = \
+            newObj.muxInfo, newObj.Shape, diffuse_color, transparency = \
                 muxAssemblyWithTopoNames(importDoc)
     else:
         # TopoMapper manages import of non A2p-Files. It generates the shapes and appropriate topo names...
         if extractSingleShape:
-            newObj.muxInfo, newObj.Shape, newObj.ViewObject.DiffuseColor, newObj.ViewObject.Transparency = \
+            newObj.muxInfo, newObj.Shape, diffuse_color, transparency = \
                 topoMapper.createTopoNames(desiredShapeLabel = dc.tx)
         else:
-            newObj.muxInfo, newObj.Shape, newObj.ViewObject.DiffuseColor, newObj.ViewObject.Transparency = \
+            newObj.muxInfo, newObj.Shape, diffuse_color, transparency = \
                 topoMapper.createTopoNames()
+
+    if FreeCAD.GuiUp:
+        newObj.ViewObject.DiffuseColor = diffuse_color
+        newObj.ViewObject.Transparency = transparency
 
     newObj.objectType = 'a2pPart'
     if extractSingleShape == True:
@@ -427,8 +434,6 @@ def importPartFromFile(
         newObj.addProperty("App::PropertyLinkList","lcsLink","importPart").lcsLink = lcsGroup
         newObj.Label = newObj.Label # this is needed to trigger an update
         lcsGroup.Label = lcsGroup.Label
-
-        #=========================================
 
     return newObj
 
@@ -754,8 +759,8 @@ class a2p_ImportPartCommand():
         if sub is not None:
             sub.showMaximized()
 
-# WF: how will this work for multiple imported objects?
-#     only A2p AI's will have property "fixedPosition"
+        # WF: how will this work for multiple imported objects?
+        #     only A2p AI's will have property "fixedPosition"
         if importedObject and not importedObject.fixedPosition:
             PartMover( view, importedObject, deleteOnEscape = True )
         else:
@@ -981,6 +986,7 @@ def duplicateImportedPart( part ):
     newObj.Placement.Base = part.Placement.Base
     newObj.Placement.Rotation = part.Placement.Rotation
     newObj.id_aa = part.id_aa
+    newObj.dict_faces = part.dict_faces
     return newObj
 
 
@@ -2215,3 +2221,14 @@ class a2p_cleanUpDebug3dCommand():
 if FreeCAD.GuiUp:
     FreeCADGui.addCommand('a2p_cleanUpDebug3dCommand', a2p_cleanUpDebug3dCommand())
 #==============================================================================
+
+
+if __name__ == "__main__":
+    document = FreeCAD.newDocument("Assemblya2plip")
+    document.saveAs("C:\\Users\\2018-0337\\Documents\\MyPhD\\CAD-generation\\Database\\tmp\\Assemblya2pl.FCStd")
+    newobj = importPartFromFile(document, 'C:\\Users\\2018-0337\\Documents\\MyPhD\\CAD-generation\\Database\\tmp\\geometry1.step')
+    identity_dict_faces = {key: key for key in range(len(newobj.Shape.Faces))}
+    newobj.dict_faces = identity_dict_faces
+    newobj.recompute()
+    document.save()
+
