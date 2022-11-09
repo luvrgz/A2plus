@@ -817,8 +817,10 @@ class PlaneConstraint(BasicConstraint):
         plane1 = getObjectFaceFromName(ob1, c.SubElement1)
         plane2 = getObjectFaceFromName(ob2, c.SubElement2)
 
-        normal1 = a2plib.getPlaneNormal(plane1.Surface)
-        normal2 = a2plib.getPlaneNormal(plane2.Surface)
+        # normal1 = a2plib.getPlaneNormal(plane1.Surface)
+        # normal2 = a2plib.getPlaneNormal(plane2.Surface)
+        normal1 = plane1.normalAt(0, 0)
+        normal2 = plane2.normalAt(0, 0)
 
         angle = math.degrees(normal1.getAngle(normal2))
         if angle <= 90.0:
