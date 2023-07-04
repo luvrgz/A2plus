@@ -827,9 +827,13 @@ class PlaneConstraint(BasicConstraint):
             direction = "aligned"
         else:
             direction = "opposed"
-        #if c.directionConstraint != direction:
-        #    c.offset = -c.offset
+
+        change = False
+        if c.directionConstraint != direction:
+            # c.offset = -c.offset
+            change = True
         c.directionConstraint = direction
+        return change
 
     @staticmethod
     def getToolTip():
