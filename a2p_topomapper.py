@@ -539,7 +539,7 @@ class TopoMapper(object):
         else:
             return ob
 
-    def createTopoNames(self, desiredShapeLabel = None):
+    def createTopoNames(self, desiredShapeLabel = None, non_topomapper = False):
         """
         creates a combined shell of all toplevel objects and
         assigns toponames to its geometry if toponaming is
@@ -629,6 +629,9 @@ class TopoMapper(object):
                                 faceColors.append(diffuseElement)
                         else:
                             faceColors.extend(diffuseCol) #let python libs extend faceColors, much faster
+
+                if non_topomapper:  # Get only the first object
+                    return [], tempShape, [], 0
 
     
             shell = Part.makeShell(faces)

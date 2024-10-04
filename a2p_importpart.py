@@ -211,7 +211,8 @@ def importPartFromFile(
         extractSingleShape = False, # load only a single user defined shape from file
         desiredShapeLabel = None,
         importToCache = False,
-        cacheKey = ""
+        cacheKey = "",
+        non_topomapper = False
         ):
     doc = _doc
     #-------------------------------------------
@@ -381,7 +382,9 @@ def importPartFromFile(
                 topoMapper.createTopoNames(desiredShapeLabel = dc.tx)
         else:
             newObj.muxInfo, newObj.Shape, diffuse_color, transparency = \
-                topoMapper.createTopoNames()
+                topoMapper.createTopoNames(non_topomapper=non_topomapper)
+
+
 
     if FreeCAD.GuiUp:
         newObj.ViewObject.DiffuseColor = diffuse_color

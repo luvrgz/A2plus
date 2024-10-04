@@ -822,17 +822,12 @@ class PlaneConstraint(BasicConstraint):
         normal1 = plane1.normalAt(0, 0)
         normal2 = plane2.normalAt(0, 0)
 
+        comp, change = {"aligned": "opposed", "opposed": "aligned"}, False
         angle = math.degrees(normal1.getAngle(normal2))
-        if angle <= 90.0:
-            direction = "aligned"
-        else:
-            direction = "opposed"
-
-        change = False
-        if c.directionConstraint != direction:
-            # c.offset = -c.offset
+        if angle <= 90.0:  # Change the direction
             change = True
-        c.directionConstraint = direction
+            c.directionConstraint = comp[c.directionConstraint]
+
         return change
 
     @staticmethod

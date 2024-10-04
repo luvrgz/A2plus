@@ -64,12 +64,14 @@ SOLVER_MAXSTEPS = 50000
 #    5:(0.00001,0.00001,False)
 #    }
 
-SOLVER_POS_ACCURACY = 1.0e-1  # gets to smaller values during solving
-SOLVER_SPIN_ACCURACY = 1.0e-1 # gets to smaller values during solving
+SOLVER_POS_ACCURACY = 1.0e-0  # gets to smaller values during solving
+SOLVER_SPIN_ACCURACY = 1.0e-0 # gets to smaller values during solving
 
 SOLVER_STEPS_CONVERGENCY_CHECK = 150 #200
 SOLVER_CONVERGENCY_FACTOR = 0.99
 SOLVER_CONVERGENCY_ERROR_INIT_VALUE = 1.0e+20
+
+SOLVER_FINAL_LEVEL_OF_ACCURACY = 1
 
 #------------------------------------------------------------------------------
 
@@ -125,11 +127,11 @@ class SolverSystem():
         else:
             solverControlData = {
                 #Index:(posAccuracy,spinAccuracy,completeSolvingRequired)
-                1:(0.1,0.1,True),
-                2:(0.01,0.01,True),
-                3:(0.001,0.001,False),
-                4:(0.0001,0.0001,False),
-                5:(0.00001,0.00001,False)
+                1:(SOLVER_POS_ACCURACY, SOLVER_SPIN_ACCURACY,True),
+                2:(0.1,0.1,True),
+                3:(0.01,0.01,False),
+                4:(0.001,0.001,False),
+                5:(0.0001,0.0001,False)
                 }
         return solverControlData
 
@@ -230,7 +232,7 @@ class SolverSystem():
 
             try:
                 Dependency.Create(doc, c, self, rigid1, rigid2)
-            except:
+            except NotImplementedError:
                 self.status = "loadingDependencyError"
                 deleteList.append(c)
 
@@ -507,7 +509,7 @@ class SolverSystem():
                 systemSolved = True
                 break
             if systemSolved:
-                if self.with_collide:
+                if self.with_collide or SOLVER_FINAL_LEVEL_OF_ACCURACY <= self.level_of_accuracy:
                     break
                 self.level_of_accuracy+=1
                 if self.level_of_accuracy > len(self.getSolverControlData()):
